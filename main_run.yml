@@ -1,0 +1,15 @@
+name: main_run
+channels:
+  - bioconda
+  - conda-forge
+  - defaults
+dependencies:
+  - numpy=1.19.2
+  - python=3.8.6
+  - seqkit=0.14.0
+  - seqtk=1.3
+  - yaml=0.2.5
+  - yarl=1.5.1
+  - pip:
+    - snakemake==7.18.2
+

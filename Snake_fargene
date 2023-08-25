@@ -95,7 +95,7 @@ rule class_a_fargene: #runs fargene, creates the translated sequences, and makes
         translate2 = out_dir + "translated/{runs}_2_QC-amino.fasta"
     params:
         num_of_processes = config["threads_fargene"],
-        model = model_folder + "class_a",
+        model =  "class_a",
         work_dir = work_dir,
         out_dir = out_dir,
         fastq_folder = fastq_folder
@@ -159,7 +159,7 @@ rule all_fargene:
     params:
         amino_dir = out_dir + "analysis/{runs}/class_a/tmpdir",
         num_of_processes = config["threads_fargene"],
-        model = lambda wildcards: model_folder + config["class_ab"][wildcards.class_ab]["model"],
+        model = lambda wildcards: config["class_ab"][wildcards.class_ab]["model"],
         work_dir = work_dir,
         out_dir = out_dir,
         fastq_folder = fastq_folder

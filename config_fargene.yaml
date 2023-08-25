@@ -28,63 +28,63 @@ class_name:
 
 class_ab:
   class_a: 
-    model: class_A.hmm
+    model: class_A
     score: 105
   class_b1_b2:
-    model: class_B_1_2.hmm
+    model: class_B_1_2
     score: 127
   class_b3: 
-    model: class_B_3.hmm
+    model: class_B_3
     score: 103
   class_c: 
-    model: class_C.hmm
+    model: class_C
     score: 248
   class_d1:
-    model: class_D_1.hmm
+    model: class_D_1
     score: 182
   class_d2:
-    model: class_D_2.hmm
+    model: class_D_2
     score: 234
   mph:
-    model: mph.hmm
+    model: mph
     score: 100
   erm_1:
-    model: erm_typeA.hmm
+    model: erm_typeA
     score: 200
   erm_2:
-    model: erm_typeF.hmm
+    model: erm_typeF
     score: 175
   tet_enzyme:
-    model: tet_enzyme.hmm
+    model: tet_enzyme
     score: 300
   tet_rpg:
-    model: tet_rpg.hmm
+    model: tet_rpg
     score: 471
   aph2b:
-    model: aminoglycoside_model_g.hmm
+    model: aminoglycoside_model_g
     score: 100
   aph3p:
-    model: aminoglycoside_model_h.hmm
+    model: aminoglycoside_model_h
     score: 100
   aph6p:
-    model: aminoglycoside_model_i.hmm
+    model: aminoglycoside_model_i
     score: 100
   aac2p:
-    model: aminoglycoside_model_a.hmm
+    model: aminoglycoside_model_a
     score: 100
   aac3_1:
-    model: aminoglycoside_model_b.hmm
+    model: aminoglycoside_model_b
     score: 100
   aac3_2:
-    model: aminoglycoside_model_c.hmm
+    model: aminoglycoside_model_c
     score: 100
   aac6p_1:
-    model: aminoglycoside_model_d.hmm
+    model: aminoglycoside_model_d
     score: 100
   aac6p_2:
-    model: aminoglycoside_model_e.hmm
+    model: aminoglycoside_model_e
     score: 100
   aac6p_3:
-    model: aminoglycoside_model_f.hmm
+    model: aminoglycoside_model_f
     score: 100
 

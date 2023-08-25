@@ -1,0 +1,142 @@
+# Find the name of runs and samples
+import glob, os
+import numpy as np
+configfile: "config_hmm_all.yaml"
+
+work_dir = config["working_folder"]
+out_dir = config["output_folder"]
+spades_folder = config["spades_folder"]
+reads_folder = config["reads_folder"]
+model_folder =  config["model_folder"]
+
+sample_run_file = glob.glob(reads_folder+"*.txt", recursive=True)
+runs_sizes = [os.stat(x).st_size for x in sample_run_file]
+sample_run_file_np = np.array(sample_run_file)
+runs_sizes_np = np.array(runs_sizes)
+# to start with small files:
+#sample_run_file_2 = sample_run_file_np[runs_sizes_np <= np.percentile(runs_sizes_np, 30)].tolist()
+sample_run_file_2 = sample_run_file_np.copy()
+
+
+runs = [f.split("/")[-1].split(".")[-2].split("_")[-2] for f in sample_run_file_2 ]
+
+
+if not os.path.exists(out_dir + "hmm"):
+   os.makedirs(out_dir + "hmm")
+
+
+rule all:
+    input:
+        reads_out = expand(out_dir+"genes/{runs}/{class_ab}.fasta", runs=runs,class_ab=config["class_name"])
+
+
+rule extract_fasta:
+    input:
+        reads_class1 = reads_folder + "{runs}_reads.txt",
+
+    output:
+        reads1 = out_dir+"fasta/{runs}/{runs}_positive_1.fastq",
+        reads2 = out_dir+"fasta/{runs}/{runs}_positive_2.fastq",
+        reads3 = out_dir+"fasta/{runs}/{runs}_out.txt"
+    conda:
+        "fargene"    
+    shadow: "minimal"
+    params:
+        num_of_processes = 1,
+        work_dir = work_dir
+    shell:
+        """                
+        seqtk subseq {params.work_dir}{wildcards.runs}/{wildcards.runs}_1_QC.fastq {input.reads_class1} > {output.reads1}
+        seqtk subseq {params.work_dir}{wildcards.runs}/{wildcards.runs}_2_QC.fastq {input.reads_class1} > {output.reads2}
+        echo "done {wildcards.runs}" > {output.reads3}
+        """
+
+
+rule make_assembly:
+    input:
+        reads1 = out_dir+"fasta/{runs}/{runs}_positive_1.fastq",
+        reads2 = out_dir+"fasta/{runs}/{runs}_positive_2.fastq",
+        reads3 = out_dir+"fasta/{runs}/{runs}_out.txt"
+    output:        
+        reads1 = out_dir+"assembly/{runs}/{runs}-contigs.fasta",
+        reads2 = out_dir+"assembly/{runs}/{runs}-amino-contigs.fasta",
+        reads3 = out_dir+"assembly/{runs}/{runs}_out.txt"
+    conda:
+        "fargene"    
+    shadow: "minimal"
+    params:
+        num_of_processes = 1,
+        work_dir = work_dir,
+        spades = spades_folder,
+        assembly_dir = lambda wildcards: out_dir + "assembly/" + wildcards.runs+"/"
+    shell:
+        """                
+        echo "assembly {wildcards.runs}"
+        echo "input files"
+        cat {input.reads3}
+        echo "continue to assembly"
+        {params.spades} --meta -1 {input.reads1} -2 {input.reads2} -o {params.assembly_dir} > {wildcards.runs}_summary.txt
+        echo " "
+        echo " "
+        echo " "
+        echo "assembly done, continue to check if contig file exists"
+        if [ -f {params.assembly_dir}contigs.fasta ]; then
+          mv {params.assembly_dir}contigs.fasta {output.reads1}
+        else
+          touch {output.reads1}
+        fi        
+        transeq {output.reads1} {output.reads2} -frame=6 -table=11 sformat=pearson
+        echo "done with assembly {wildcards.runs}" > {output.reads3}
+        """
+
+
+rule run_hmm:
+    input:
+        reads1 = out_dir + "assembly/{runs}/{runs}-amino-contigs.fasta",
+        reads2 = out_dir + "assembly/{runs}/{runs}_out.txt"
+    output:
+        genes_out = out_dir + "genes/{runs}/{class_ab}.fasta",
+        genes_list_out = out_dir + "hmm_filter/{runs}/{class_ab}.csv",
+        hmm_out = out_dir + "hmm/{runs}_{class_ab}_hmmsearched.out"
+    shadow: "minimal"
+    params:
+        num_of_processes = 1,                
+        model = lambda wildcards: model_folder + config["classes_ab"][wildcards.class_ab]["model"],
+        threshold = lambda wildcards: config["classes_ab"][wildcards.class_ab]["score"]
+    conda:
+        "fargene"
+    shell:
+        """        
+        echo "starting HMM"
+        echo "hmm {wildcards.runs}"
+        echo "running hmm"        
+        hmmsearch --domtblout {output.hmm_out} -E 1000 --domE 1000 {params.model} {input.reads1}  > temp_out.txt      
+        echo "hmm done, goint to do filter"        
+        cat {output.hmm_out} |grep -v '^#'  > {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ||true 
+        echo "filter hmm started"
+        if [ -s {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ]; then
+          echo "there are some matches to be evaluated"
+          grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1,$3,$20,$21}}' > temp_out2.csv 
+          echo "matches and metadata created"
+          grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1}}' > tmptlist.txt
+          echo "matches created"
+        else
+          echo "empty file hmm"
+          touch tmptlist.txt
+        fi
+        if [ -s tmptlist.txt ]; then
+          cat temp_out2.csv  > {output.genes_list_out}
+          seqtk subseq {input.reads1} tmptlist.txt > tmp.fasta
+          sed '/^>/s/$/@@@{wildcards.class_ab}/' tmp.fasta > {output.genes_out}
+        else
+          echo " empty file "
+          echo " empty file "
+          echo " empty file "
+          echo " empty file "
+          touch {output.genes_list_out}
+          touch {output.genes_out}
+        fi
+        """
+
+
+

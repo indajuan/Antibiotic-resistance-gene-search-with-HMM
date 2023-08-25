@@ -1,0 +1,90 @@
+working_folder: /storage/inda/metagenome_short/data/
+reads_folder: /storage/inda/metagenome_short/data/tisarg_reads_95/
+output_folder: /storage/inda/metagenome_short/data/tisarg_output_95/
+model_folder: /home/inda/fargene/fargene_analysis/models/
+spades_folder: /home/inda/.conda/envs/fargene/bin/spades.py
+
+class_name:
+  - class_a
+  - class_b1_b2
+  - class_b3
+  - class_c
+  - class_d1
+  - class_d2
+  - mph
+  - erm_1
+  - erm_2
+  - tet_enzyme
+  - tet_rpg
+  - aph2b
+  - aph3p
+  - aph6p
+  - aac2p
+  - aac3_1
+  - aac3_2
+  - aac6p_1
+  - aac6p_2
+  - aac6p_3
+
+classes_ab:
+  class_a: 
+    model: class_A.hmm
+    score: 105
+  class_b1_b2:
+    model: class_B_1_2.hmm
+    score: 127
+  class_b3: 
+    model: class_B_3.hmm
+    score: 103
+  class_c: 
+    model: class_C.hmm
+    score: 248
+  class_d1:
+    model: class_D_1.hmm
+    score: 182
+  class_d2:
+    model: class_D_2.hmm
+    score: 234
+  mph:
+    model: mph.hmm
+    score: 100
+  erm_1:
+    model: erm_typeA.hmm
+    score: 200
+  erm_2:
+    model: erm_typeF.hmm
+    score: 175
+  tet_enzyme:
+    model: tet_enzyme.hmm
+    score: 300
+  tet_rpg:
+    model: tet_rpg.hmm
+    score: 471
+  aph2b:
+    model: aminoglycoside_model_g.hmm
+    score: 100
+  aph3p:
+    model: aminoglycoside_model_h.hmm
+    score: 100
+  aph6p:
+    model: aminoglycoside_model_i.hmm
+    score: 100
+  aac2p:
+    model: aminoglycoside_model_a.hmm
+    score: 100
+  aac3_1:
+    model: aminoglycoside_model_b.hmm
+    score: 100
+  aac3_2:
+    model: aminoglycoside_model_c.hmm
+    score: 100
+  aac6p_1:
+    model: aminoglycoside_model_d.hmm
+    score: 100
+  aac6p_2:
+    model: aminoglycoside_model_e.hmm
+    score: 100
+  aac6p_3:
+    model: aminoglycoside_model_f.hmm
+    score: 100
+

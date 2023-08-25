@@ -1,0 +1,200 @@
+# Find the name of runs and samples
+import glob, os
+import numpy as np
+
+configfile: "config_fargene.yaml"
+
+work_dir = config["working_folder"]
+out_dir = config["output_folder"]
+fastq_folder = config["fastq_folder"]
+model_folder =  config["model_folder"]
+
+sample_run_file = glob.glob(fastq_folder + "*/*_1_QC.fastq", recursive=True)
+runs_sizes = [os.stat(x).st_size for x in sample_run_file]
+sample_run_file_np = np.array(sample_run_file)
+runs_sizes_np = np.array(runs_sizes)
+# to start with small files:
+#sample_run_file_2 = sample_run_file_np[runs_sizes_np <= np.percentile(runs_sizes_np, 30)].tolist()
+sample_run_file_2 = sample_run_file_np.copy() #
+
+runs = [f.split("/")[-2] for f in sample_run_file_2 ]
+
+ruleorder: class_a_fargene > all_fargene > add_genes >   concat_reads 
+
+rule all:
+    input:
+        reads_out = expand(out_dir+"reads/{runs}/{class_ab}.txt", runs=runs,class_ab=config["class_name"]), #reads flagged for assembly
+        translate1 = expand(out_dir+"translated/{runs}_1_QC-amino.fasta", runs=runs), #translated reads before assembly (just to run the rules)
+        translate2 = expand(out_dir+"translated/{runs}_2_QC-amino.fasta", runs=runs), #translated reads before assembly (just to run the rules)
+        genes_out = expand(out_dir+"genes/{runs}/{class_ab}-aa.fasta", runs=runs, class_ab=config["class_name"]) #putative AR genes per class
+
+
+rule concat_reads:
+    input:
+        reads_class1 = out_dir+"analysis/{runs}/{class_ab}/tmpdir/listOfIds_1.txt",
+        reads_class2 = out_dir+"analysis/{runs}/{class_ab}/tmpdir/listOfIds_2.txt"
+    output:
+        reads1 = out_dir+"reads/{runs}/{class_ab}.txt"
+    shadow: "minimal"
+    params:
+        num_of_processes = 1
+    shell:
+        """                
+        if [ -f {input.reads_class1} ]; then
+          sed s/$/,{wildcards.class_ab},1/ {input.reads_class1} >> {output.reads1}
+          echo " "
+        else
+          echo " "
+        fi
+
+        if [ -f {input.reads_class2} ]; then
+          sed s/$/,{wildcards.class_ab},2/ {input.reads_class2} >> {output.reads1}
+          echo " "
+        else
+          echo " "
+        fi
+        if [ -f {output.reads1} ]; then
+          echo " "
+        else
+          touch {output.reads1} 
+        fi
+
+        """
+
+
+
+rule add_genes:
+    input:
+        pred_genes = out_dir + "analysis/{runs}/{class_ab}/predictedGenes/retrieved-contigs-peptides.fasta"
+    output:
+        genes_out = out_dir + "genes/{runs}/{class_ab}-aa.fasta"
+    shadow: "minimal"
+    params:
+        num_of_processes = 1
+    shell:
+        """                
+        if [ -s {input.pred_genes} ]; then
+          sed '/^>/s/$/@@@{wildcards.class_ab}/' {input.pred_genes} >> {output.genes_out}
+          echo " "
+        else
+          touch {output.genes_out}
+        fi
+        """
+
+rule class_a_fargene: #runs fargene, creates the translated sequences, and makes way for all the other classes
+    input:
+        comp_file1 = expand(fastq_folder + "{runs}/{runs}_1_QC.fastq", runs=runs),
+        comp_file2 = expand(fastq_folder + "{runs}/{runs}_2_QC.fastq", runs=runs)
+    output:
+        out1 = out_dir + "analysis/{runs}/class_a/tmpdir/{runs}_1_QC-amino.fasta",
+        out2 = out_dir + "analysis/{runs}/class_a/tmpdir/{runs}_2_QC-amino.fasta",
+        out3 = out_dir + "analysis/{runs}/class_a/tmpdir/listOfIds_1.txt",
+        out4 = out_dir + "analysis/{runs}/class_a/tmpdir/listOfIds_2.txt",
+        out5 = out_dir + "analysis/{runs}/class_a/predictedGenes/retrieved-contigs-peptides.fasta",
+        translate1 = out_dir + "translated/{runs}_1_QC-amino.fasta",
+        translate2 = out_dir + "translated/{runs}_2_QC-amino.fasta"
+    params:
+        num_of_processes = config["threads_fargene"],
+        model = model_folder + "class_a",
+        work_dir = work_dir,
+        out_dir = out_dir,
+        fastq_folder = fastq_folder
+    conda:
+        "fargene"
+    threads: config["threads_fargene"]
+    shell:
+        """
+        echo $CONDA_PREFIX
+        echo "fargene class A {wildcards.runs} {params.model}"
+        if [ -s {params.fastq_folder}{wildcards.runs}/{wildcards.runs}_1_QC.fastq ]; then
+          fargene -i {params.fastq_folder}{wildcards.runs}/*.fastq --meta --hmm-model {params.model} -o {params.out_dir}analysis/{wildcards.runs}/class_a -p {params.num_of_processes} --no-quality-filtering --store-peptides --force
+        else
+          touch {output.out1}
+          touch {output.out2}
+          touch {output.out3}
+          touch {output.out4}
+          touch {output.out5}
+        fi
+        if [ -f {output.out1} ]; then
+          echo ""
+        else
+          touch {output.out1}
+        fi
+        if [ -f {output.out2} ]; then
+          echo ""
+        else
+          touch {output.out2}
+        fi  
+        if [ -f {output.out3} ]; then
+          echo ""
+        else
+          touch {output.out3}
+        fi 
+        if [ -f {output.out4} ]; then
+          echo ""
+        else
+          touch {output.out4}
+        fi         
+        if [ -f {output.out5} ]; then
+          echo ""
+        else
+          touch {output.out5}
+        fi 
+        cp {output.out1} {output.translate1}
+        cp {output.out2} {output.translate2}
+        """
+
+
+rule all_fargene:
+    input:
+        comp_file1 = fastq_folder + "{runs}/{runs}_1_QC.fastq",
+        comp_file2 = fastq_folder + "{runs}/{runs}_2_QC.fastq",
+        amino1 = out_dir + "analysis/{runs}/class_a/tmpdir/{runs}_1_QC-amino.fasta",
+        amino2 = out_dir + "analysis/{runs}/class_a/tmpdir/{runs}_2_QC-amino.fasta",
+        out9 = out_dir + "analysis/{runs}/class_a/predictedGenes/retrieved-contigs-peptides.fasta",
+    output:
+        out1 = out_dir + "analysis/{runs}/{class_ab}/tmpdir/listOfIds_1.txt",
+        out2 = out_dir + "analysis/{runs}/{class_ab}/tmpdir/listOfIds_2.txt",
+        out3 = out_dir + "analysis/{runs}/{class_ab}/predictedGenes/retrieved-contigs-peptides.fasta",
+    params:
+        amino_dir = out_dir + "analysis/{runs}/class_a/tmpdir",
+        num_of_processes = config["threads_fargene"],
+        model = lambda wildcards: model_folder + config["class_ab"][wildcards.class_ab]["model"],
+        work_dir = work_dir,
+        out_dir = out_dir,
+        fastq_folder = fastq_folder
+    threads: config["threads_fargene"]
+    conda:
+        "fargene"
+    shell:
+        """
+        echo "fargene  {wildcards.runs} class {params.model}"
+        if [ {wildcards.class_ab} == "class_a" ]; then
+          echo "Ignoring class a"
+        else
+          if [ -s {input.amino1} ]; then
+            fargene -i {params.fastq_folder}{wildcards.runs}/*.fastq --meta --hmm-model {params.model} -o {params.out_dir}analysis/{wildcards.runs}/{wildcards.class_ab} -p {params.num_of_processes} --no-quality-filtering --rerun --amino-dir {params.amino_dir} --force
+          else
+            touch {output.out1}          
+            touch  {output.out2}
+            touch  {output.out3}
+          fi
+          #  
+          if [ -f {output.out1} ]; then
+            echo ""
+          else
+            touch {output.out1}
+          fi
+          if [ -f {output.out2} ]; then
+            echo ""
+          else
+            touch {output.out2}
+          fi  
+          if [ -f {output.out3} ]; then
+            echo ""
+          else
+            touch {output.out3}
+          fi 
+        fi
+        """
+

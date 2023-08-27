@@ -111,7 +111,7 @@ rule run_hmm:
     shadow: "minimal"
     params:
         num_of_processes = 1,                
-        model = lambda wildcards: model_folder + config["class_ab"][wildcards.class_ab]["model"],
+        model = lambda wildcards: model_folder + config["class_ab"][wildcards.class_ab]["model"] + ".hmm",
         threshold = lambda wildcards: config["class_ab"][wildcards.class_ab]["score"]
     conda:
         "fargene"

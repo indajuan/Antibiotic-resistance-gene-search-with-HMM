@@ -30,61 +30,81 @@ class_ab:
   class_a: 
     model: class_A
     score: 105
+    out_tisarg: class_a
   class_b1_b2:
     model: class_B_1_2
     score: 127
+    out_tisarg: class_b1_b2
   class_b3: 
     model: class_B_3
     score: 103
+    out_tisarg: class_b3
   class_c: 
     model: class_C
     score: 248
+    out_tisarg: class_c
   class_d1:
     model: class_D_1
     score: 182
+    out_tisarg: class_d1
   class_d2:
     model: class_D_2
     score: 234
+    out_tisarg: class_d1
   mph:
     model: mph
     score: 100
+    out_tisarg: mph
   erm_1:
     model: erm_typeA
     score: 200
+    out_tisarg: erm_1
   erm_2:
     model: erm_typeF
     score: 175
+    out_tisarg: erm_2
   tet_enzyme:
     model: tet_enzyme
     score: 300
+    out_tisarg: tet_enzyme
   tet_rpg:
     model: tet_rpg
     score: 471
+    out_tisarg: tet_rpg
   aph2b:
     model: aminoglycoside_model_g
     score: 100
+    out_tisarg: aph2b
   aph3p:
     model: aminoglycoside_model_h
     score: 100
-  aph6p:
+    out_tisarg: aph3p
+  aph6:
     model: aminoglycoside_model_i
     score: 100
+    out_tisarg: aph6
   aac2p:
     model: aminoglycoside_model_a
     score: 100
+    out_tisarg: aac2p
   aac3_1:
     model: aminoglycoside_model_b
     score: 100
+    out_tisarg: aac3_class1
   aac3_2:
     model: aminoglycoside_model_c
     score: 100
+    out_tisarg: aac3_class2
   aac6p_1:
     model: aminoglycoside_model_d
     score: 100
+    out_tisarg: aac6p_class1
   aac6p_2:
     model: aminoglycoside_model_e
     score: 100
+    out_tisarg: aac6p_class2
   aac6p_3:
     model: aminoglycoside_model_f
     score: 100
+    out_tisarg: aac6p_class3
 

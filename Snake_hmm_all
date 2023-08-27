@@ -8,6 +8,7 @@ out_dir = config["output_folder"]
 spades_folder = config["spades_folder"]
 reads_folder = config["reads_folder"]
 model_folder =  config["model_folder"]
+fastq_folder = config["fastq_folder"]
 
 sample_run_file = glob.glob(reads_folder+"*.txt", recursive=True)
 runs_sizes = [os.stat(x).st_size for x in sample_run_file]
@@ -27,40 +28,49 @@ if not os.path.exists(out_dir + "hmm"):
 
 rule all:
     input:
-        reads_out = expand(out_dir+"genes/{runs}/{class_ab}.fasta", runs=runs,class_ab=config["class_name"])
+        reads_out = expand(out_dir+"genes/{runs}/{class_ab}.fasta", runs=runs, class_ab=config["class_name"])
 
 
 rule extract_fasta:
     input:
-        reads_class1 = reads_folder + "{runs}_reads.txt",
+        reads_class1 = reads_folder + "{runs}_class.txt",
 
     output:
-        reads1 = out_dir+"fasta/{runs}/{runs}_positive_1.fastq",
-        reads2 = out_dir+"fasta/{runs}/{runs}_positive_2.fastq",
-        reads3 = out_dir+"fasta/{runs}/{runs}_out.txt"
+        reads1 = out_dir+"fasta/{runs}/{runs}_{class_ab}_positive_1.fastq",
+        reads2 = out_dir+"fasta/{runs}/{runs}_{class_ab}_positive_2.fastq",
+        reads3 = out_dir+"fasta/{runs}/{runs}_{class_ab}_out.txt"
     conda:
         "fargene"    
     shadow: "minimal"
     params:
         num_of_processes = 1,
-        work_dir = work_dir
+        work_dir = work_dir,
+        name_code = lambda wildcards: config["class_ab"][wildcards.class_ab]["out_tisarg"],
+        fastq_folder = fastq_folder
     shell:
         """                
-        seqtk subseq {params.work_dir}{wildcards.runs}/{wildcards.runs}_1_QC.fastq {input.reads_class1} > {output.reads1}
-        seqtk subseq {params.work_dir}{wildcards.runs}/{wildcards.runs}_2_QC.fastq {input.reads_class1} > {output.reads2}
-        echo "done {wildcards.runs}" > {output.reads3}
+        cat {input.reads_class1} |grep {params.name_code} |awk -F "," '{{print $1}}' |awk -F "_"  '{{print $1}}' |sort |uniq > tmp_class_read.txt ||true 
+        if [ -s tmp_class_read.txt ]; then
+          seqtk subseq {params.fastq_folder}{wildcards.runs}/{wildcards.runs}_1_QC.fastq tmp_class_read.txt > {output.reads1}
+          seqtk subseq {params.fastq_folder}{wildcards.runs}/{wildcards.runs}_2_QC.fastq tmp_class_read.txt > {output.reads2}
+          echo "done {wildcards.runs}" > {output.reads3}
+        else
+          touch {output.reads1}
+          touch {output.reads2}
+          echo "no reads, done {wildcards.runs} {wildcards.class_ab}" > {output.reads3}
+        fi
         """
 
 
 rule make_assembly:
     input:
-        reads1 = out_dir+"fasta/{runs}/{runs}_positive_1.fastq",
-        reads2 = out_dir+"fasta/{runs}/{runs}_positive_2.fastq",
-        reads3 = out_dir+"fasta/{runs}/{runs}_out.txt"
+        reads1 = out_dir+"fasta/{runs}/{runs}_{class_ab}_positive_1.fastq",
+        reads2 = out_dir+"fasta/{runs}/{runs}_{class_ab}_positive_2.fastq",
+        reads3 = out_dir+"fasta/{runs}/{runs}_{class_ab}_out.txt"
     output:        
-        reads1 = out_dir+"assembly/{runs}/{runs}-contigs.fasta",
-        reads2 = out_dir+"assembly/{runs}/{runs}-amino-contigs.fasta",
-        reads3 = out_dir+"assembly/{runs}/{runs}_out.txt"
+        reads1 = out_dir+"assembly/{runs}_{class_ab}/{runs}_{class_ab}-contigs.fasta",
+        reads2 = out_dir+"assembly/{runs}_{class_ab}/{runs}_{class_ab}-amino-contigs.fasta",
+        reads3 = out_dir+"assembly/{runs}_{class_ab}/{runs}_{class_ab}_out.txt"
     conda:
         "fargene"    
     shadow: "minimal"
@@ -68,7 +78,7 @@ rule make_assembly:
         num_of_processes = 1,
         work_dir = work_dir,
         spades = spades_folder,
-        assembly_dir = lambda wildcards: out_dir + "assembly/" + wildcards.runs+"/"
+        assembly_dir = lambda wildcards: out_dir + "assembly/" + wildcards.runs + "_" + wildcards.class_ab + "/"
     shell:
         """                
         echo "assembly {wildcards.runs}"
@@ -92,8 +102,8 @@ rule make_assembly:
 
 rule run_hmm:
     input:
-        reads1 = out_dir + "assembly/{runs}/{runs}-amino-contigs.fasta",
-        reads2 = out_dir + "assembly/{runs}/{runs}_out.txt"
+        reads1 = out_dir + "assembly/{runs}_{class_ab}/{runs}_{class_ab}-amino-contigs.fasta",
+        reads2 = out_dir + "assembly/{runs}_{class_ab}/{runs}_{class_ab}_out.txt"
     output:
         genes_out = out_dir + "genes/{runs}/{class_ab}.fasta",
         genes_list_out = out_dir + "hmm_filter/{runs}/{class_ab}.csv",
@@ -101,8 +111,8 @@ rule run_hmm:
     shadow: "minimal"
     params:
         num_of_processes = 1,                
-        model = lambda wildcards: model_folder + config["classes_ab"][wildcards.class_ab]["model"],
-        threshold = lambda wildcards: config["classes_ab"][wildcards.class_ab]["score"]
+        model = lambda wildcards: model_folder + config["class_ab"][wildcards.class_ab]["model"],
+        threshold = lambda wildcards: config["class_ab"][wildcards.class_ab]["score"]
     conda:
         "fargene"
     shell:

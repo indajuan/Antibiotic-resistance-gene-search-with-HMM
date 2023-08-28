@@ -92,10 +92,11 @@ rule make_assembly:
         echo "assembly done, continue to check if contig file exists"
         if [ -f {params.assembly_dir}contigs.fasta ]; then
           mv {params.assembly_dir}contigs.fasta {output.reads1}
+          transeq {output.reads1} {output.reads2} -frame=6 -table=11 sformat=pearson
         else
           touch {output.reads1}
-        fi        
-        transeq {output.reads1} {output.reads2} -frame=6 -table=11 sformat=pearson
+          touch {output.reads2}
+        fi                
         echo "done with assembly {wildcards.runs}" > {output.reads3}
         """
 

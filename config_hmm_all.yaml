@@ -51,7 +51,7 @@ class_ab:
   class_d2:
     model: class_D_2
     score: 234
-    out_tisarg: class_d1
+    out_tisarg: class_d2
   mph:
     model: mph
     score: 100

@@ -91,8 +91,13 @@ rule make_assembly:
         echo " "
         echo "assembly done, continue to check if contig file exists"
         if [ -f {params.assembly_dir}contigs.fasta ]; then
-          mv {params.assembly_dir}contigs.fasta {output.reads1}
-          transeq {output.reads1} {output.reads2} -frame=6 -table=11 sformat=pearson
+          if [ -s {params.assembly_dir}contigs.fasta ]; then
+            mv {params.assembly_dir}contigs.fasta {output.reads1}
+            transeq {output.reads1} {output.reads2} -frame=6 -table=11 sformat=pearson
+          else
+            touch {output.reads1}
+            touch {output.reads2}  
+          fi
         else
           touch {output.reads1}
           touch {output.reads2}
@@ -121,31 +126,37 @@ rule run_hmm:
         echo "starting HMM"
         echo "hmm {wildcards.runs}"
         echo "running hmm"        
-        hmmsearch --domtblout {output.hmm_out} -E 1000 --domE 1000 {params.model} {input.reads1}  > temp_out.txt      
-        echo "hmm done, goint to do filter"        
-        cat {output.hmm_out} |grep -v '^#'  > {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ||true 
-        echo "filter hmm started"
-        if [ -s {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ]; then
-          echo "there are some matches to be evaluated"
-          grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1,$3,$20,$21}}' > temp_out2.csv 
-          echo "matches and metadata created"
-          grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1}}' > tmptlist.txt
-          echo "matches created"
+        if [ -s {input.reads1} ]; then
+          hmmsearch --domtblout {output.hmm_out} -E 1000 --domE 1000 {params.model} {input.reads1}  > temp_out.txt      
+          echo "hmm done, goint to do filter"        
+          cat {output.hmm_out} |grep -v '^#'  > {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ||true 
+          echo "filter hmm started"
+          if [ -s {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt ]; then
+            echo "there are some matches to be evaluated"
+            grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1,$3,$20,$21}}' > temp_out2.csv 
+            echo "matches and metadata created"
+            grep -v '^#' {wildcards.runs}_{wildcards.class_ab}_temp_out1.txt | awk '$14>{params.threshold} {{print $1}}' > tmptlist.txt
+            echo "matches created"
+          else
+            echo "empty file hmm"
+            touch tmptlist.txt
+          fi
+          if [ -s tmptlist.txt ]; then
+            cat temp_out2.csv  > {output.genes_list_out}
+            seqtk subseq {input.reads1} tmptlist.txt > tmp.fasta
+            sed '/^>/s/$/@@@{wildcards.class_ab}/' tmp.fasta > {output.genes_out}
+          else
+            echo " empty file "
+            echo " empty file "
+            echo " empty file "
+            echo " empty file "
+            touch {output.genes_list_out}
+            touch {output.genes_out}
+          fi
         else
-          echo "empty file hmm"
-          touch tmptlist.txt
-        fi
-        if [ -s tmptlist.txt ]; then
-          cat temp_out2.csv  > {output.genes_list_out}
-          seqtk subseq {input.reads1} tmptlist.txt > tmp.fasta
-          sed '/^>/s/$/@@@{wildcards.class_ab}/' tmp.fasta > {output.genes_out}
-        else
-          echo " empty file "
-          echo " empty file "
-          echo " empty file "
-          echo " empty file "
           touch {output.genes_list_out}
           touch {output.genes_out}
+          touch {output.hmm_out}
         fi
         """
 

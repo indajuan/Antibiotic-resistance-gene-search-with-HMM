@@ -85,10 +85,21 @@ rule make_assembly:
         echo "input files"
         cat {input.reads3}
         echo "continue to assembly"
-        {params.spades} --meta -1 {input.reads1} -2 {input.reads2} -o {params.assembly_dir} > {wildcards.runs}_summary.txt
-        echo " "
-        echo " "
-        echo " "
+        if [ -s {input.reads1} ]; then
+          echo "yes reads forward"
+          if [ -s {input.reads2} ]; then
+            echo "yes reads reverse"
+            echo "doing spades"
+            {params.spades} --meta -1 {input.reads1} -2 {input.reads2} -o {params.assembly_dir} > {wildcards.runs}_summary.txt
+            echo "done spades"
+          else
+            echo " no reads reverse"
+          fi
+        else
+          "making empty files"
+          touch {output.reads1}
+          touch {output.reads2}          
+        fi
         echo "assembly done, continue to check if contig file exists"
         if [ -f {params.assembly_dir}contigs.fasta ]; then
           if [ -s {params.assembly_dir}contigs.fasta ]; then
